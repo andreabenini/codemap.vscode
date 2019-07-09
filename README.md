@@ -18,8 +18,11 @@ _Features_:
   * C#
   * TypeScript/JavaScript
   * Python
+  * Java
   * Erlang
   * Markdown
+  * PowerShell
+  * R
   * JSON
   * XML/SVG/XAML
 * [Customization by adding support for new syntaxes via:](https://github.com/oleg-shilo/codemap.vscode/wiki/Adding-custom-mappers)
