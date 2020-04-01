@@ -4,6 +4,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { Uri, commands } from "vscode";
 
+
+
 declare global {
     interface String {
         // splitBy(separator: string): string;
@@ -49,13 +51,15 @@ String.prototype.replaceAll = function (search, replacement) {
     return target.replace(new RegExp(search, 'g'), replacement);
 };
 
+
 export class config_defaults {
 
-    // Currently (4 May 2018) VSCode has broken returning defaults from the contributes.configuration.properties 
+    // Currently (4 May 2018) VSCode has broken returning defaults from the contributes.configuration.properties
     // It looks like issue #14500 is back
     // Thus implementing a poor man defaults
 
     public textMode = true;
+    public textModeExpanded = true;
     public textModeLevelPrefix = "   ";
     public json = [
         {
@@ -134,6 +138,7 @@ export class config_defaults {
         else if (name == 'json') return this.json;
         else if (name == 'textModeLevelPrefix') return this.textModeLevelPrefix;
         else if (name == 'textMode') return this.textMode;
+        else if (name == 'textModeExpanded') return this.textModeExpanded;
         else if (name == 'maxNestingLevel') return 3;
         else return null;
     }

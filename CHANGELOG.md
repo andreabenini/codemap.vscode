@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.10.3
+
+* Issue #27: Add an option to put the code map back into the explorer. 
+
+## 1.10.2
+
+* Issue #25: Added collapse all items button
+
+## 1.10.1
+
+* Issue #22: Codemap doesn't display async function
+
 ## 1.10.0
 
 * Issue #18: Simplify mapping rules for Python
