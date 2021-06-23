@@ -17,6 +17,8 @@ const defaults = new config_defaults();
 let treeViewProvider1: FavoritesTreeProvider;
 let treeViewProvider2: FavoritesTreeProvider;
 
+let moduleModDates = {};
+
 function get_actual_mapper(mapper: any): any {
     if (typeof mapper == "string") {
         let mapper_value = mapper as string;
@@ -29,6 +31,20 @@ function get_actual_mapper(mapper: any): any {
         }
         return mapper;
     } else return mapper;
+}
+
+function requireWithHotReload(module: string) {
+    // Delete from module cache if the file has changed since the last time it
+    // was imported:
+    let modulePath = require.resolve(module);
+    let modDate = fs.statSync(modulePath).mtimeMs;
+    let prevModDate = moduleModDates[modulePath];
+    if (prevModDate !== undefined && prevModDate !== modDate) {
+        delete require.cache[modulePath];
+    }
+    moduleModDates[modulePath] = modDate;
+
+    return require(module);
 }
 
 function get_map_items(): MapInfo {
@@ -58,8 +74,8 @@ function get_map_items(): MapInfo {
             }
 
             let mapper = config.get("overloaded." + value_name, null);
-            
-            if(mapper == null)
+
+            if (mapper == null)
                 mapper = config.get(value_name, defaults.get(value_name));
 
             mapper = get_actual_mapper(mapper);
@@ -67,7 +83,7 @@ function get_map_items(): MapInfo {
                 if (typeof mapper == "string") {
                     // custom dedicated mapper
                     // process.env.VSCODE_USER
-                    var dynamic_mapper = require(mapper as string).mapper;
+                    var dynamic_mapper = requireWithHotReload(mapper as string).mapper;
                     return {
                         sourceFile: document,
                         items: dynamic_mapper.generate(document)
@@ -158,6 +174,8 @@ function navigate_to(sourceFile: string, line: number) {
                     new vscode.Position(Math.floor(line), 0),
                     new vscode.Position(Math.floor(line), 0)
                 );
+
+                commands.executeCommand('editor.unfold');
             }
         });
 }
@@ -195,7 +213,7 @@ function navigate_to_selected(element: MapItem) {
         });
 }
 
-function reveal_currentline_in_tree(treeView1: vscode.TreeView<MapItem>, treeView2: vscode.TreeView<MapItem>) {
+function reveal_current_line_in_tree(treeView1: vscode.TreeView<MapItem>, treeView2: vscode.TreeView<MapItem>) {
 
     let editor = vscode.window.activeTextEditor;
 
@@ -261,7 +279,7 @@ export function activate(context: vscode.ExtensionContext) {
     let treeView1 = vscode.window.createTreeView("codemap-own-view", { treeDataProvider: treeViewProvider1, showCollapseAll: true });
     let treeView2 = vscode.window.createTreeView("codemap-explorer-view", { treeDataProvider: treeViewProvider2, showCollapseAll: true });
 
-    vscode.commands.registerCommand("codemap.reveal", () => reveal_currentline_in_tree(treeView1, treeView2));
+    vscode.commands.registerCommand("codemap.reveal", () => reveal_current_line_in_tree(treeView1, treeView2));
     vscode.commands.registerCommand("codemap.quick_pick", quick_pick);
     vscode.commands.registerCommand("codemap.refresh", () => treeViewProvider1.refresh());
 

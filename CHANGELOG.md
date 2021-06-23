@@ -1,5 +1,15 @@
 # Change Log
 
+## 1.16.1 (15 May 2021)
+
+- Issue #55: Unfold also in editor
+- Issue #50: Alpha Sorting for custom generic mapper
+- Issue #51: codemap.quick_pick not found
+- Addressed dependencies' vulnerabilities
+- Only refresh when the document is saved, not when it is edited
+- Hot-reload custom mapper scripts when they have changed
+- Update mapper_tcl.ts
+
 ## 1.16.0 (23 September 2020)
 
 - Added support for TCS syntax
