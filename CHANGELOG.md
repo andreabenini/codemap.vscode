@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.16.3 (22 April 2022)
+
+- Issue #66: Generic Mapper: a pipe char in the source interferes with the complete mapping
+
 ## 1.16.2 (10 sep 2021)
 
 - Added generic mapper for VB.NET syntax
