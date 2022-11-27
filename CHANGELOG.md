@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.18.0 (11 November 2022)
+
+- Issue #72: Add sort button to the CodeMap display (continuation)
+  Added config value "defaultSortDirection"
+  Special txs to Timhobson-source who contributed this enhancement
+
+## 1.17.0 (20 October 2022)
+
+- Issue #72: Add sort button to the CodeMap display  
+Added context menu for sorting direction when it is enabled. 
+Supported sorting directions are:
+- Ascendant
+- Descendant
+- By location (in document)
+After switching the active document the default sorting direction (ascendant) is always restored.
 
 ## 1.16.4 (24 August 2022)
 
