@@ -1,5 +1,28 @@
 # Change Log
 
+## 1.20.1 (19 March 2023)
+
+- Just a rebuild of v1.20.1 (#82)
+
+## 1.20.1 (18 March 2023)
+
+- Syntaxer upgraded to v3.1.2 to run on .NET 7.0
+
+## 1.20.0 (5 December 2022)
+
+- Bumped version to align with the published one on VSCode marketplace
+
+## 1.19.1 (5 December 2022)
+
+- PR #81: opening new unopened script initially filters all nodes.
+  This is a fix of an accidental side effect of the very previous PR.
+
+## 1.19.0 (2 December 2022)
+
+- PR #80: Add sorting option (include/exclude) by node type (e.g. class, functions) 
+  The option is available in the [explorer view](https://github.com/oleg-shilo/codemap.vscode/pull/80).
+- Incorporated GitHub suggested vulnerability patches  
+
 ## 1.18.0 (11 November 2022)
 
 - Issue #72: Add sort button to the CodeMap display (continuation)
@@ -9,7 +32,7 @@
 ## 1.17.0 (20 October 2022)
 
 - Issue #72: Add sort button to the CodeMap display  
-Added context menu for sorting direction when it is enabled. 
+Added context menu for sorting direction when it is enabled.
 Supported sorting directions are:
 - Ascendant
 - Descendant
