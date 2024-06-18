@@ -1,3 +1,8 @@
+/**
+ * This file is a part of CodeMap distribution. 
+ * It will be overwritten after the extension next update. Thus you may want to make an editable copy of
+ * this file and add it as a custom dedicated mapper in the settings file.
+*/
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as fsx from "fs-extra";
@@ -93,6 +98,25 @@ export class mapper {
     }
 }
 
+export function user_dir(): string {
+    // ext_context.storagePath cannot be used as it is undefined if no workspace loaded
+
+    // vscode:
+    // Windows %appdata%\Code\User\settings.json
+    // Mac $HOME/Library/Application Support/Code/User/settings.json
+    // Linux $HOME/.config/Code/User/settings.json
+
+    if (os.platform() == 'win32') {
+        return path.join(process.env.APPDATA, 'Code', 'User', 'codemap.user');
+    }
+    else if (os.platform() == 'darwin') {
+        return path.join(process.env.HOME, 'Library', 'Application Support', 'Code', 'User', 'codemap.user');
+    }
+    else {
+        return path.join(process.env.HOME, '.config', 'Code', 'User', 'codemap.user');
+    }
+}
+
 function DeploySyntaxer() {
 
     function create_dir(dir: string): void {
@@ -101,24 +125,6 @@ function DeploySyntaxer() {
         mkdirp.sync(dir, allRWEPermissions);
     }
 
-    function user_dir(): string {
-        // ext_context.storagePath cannot be used as it is undefined if no workspace loaded
-
-        // vscode:
-        // Windows %appdata%\Code\User\settings.json
-        // Mac $HOME/Library/Application Support/Code/User/settings.json
-        // Linux $HOME/.config/Code/User/settings.json
-
-        if (os.platform() == 'win32') {
-            return path.join(process.env.APPDATA, 'Code', 'User', 'codemap.user');
-        }
-        else if (os.platform() == 'darwin') {
-            return path.join(process.env.HOME, 'Library', 'Application Support', 'Code', 'User', 'codemap.user');
-        }
-        else {
-            return path.join(process.env.HOME, '.config', 'Code', 'User', 'codemap.user');
-        }
-    }
 
     let fileName = "syntaxer.dll";
     let cliFileName = "syntaxer.cli.dll";

@@ -61,26 +61,7 @@ function get_map_items(): MapInfo {
 
         if (document) {
 
-            let value_name = "";
-
-            if (fs.existsSync(document)) {
-                var extension = path.extname(document.toLowerCase());
-                if (extension) {
-                    // Trim starting dot: '.py' vs 'py'
-                    value_name = extension.substring(1).toLowerCase();
-                }
-                else {
-                    // Add bracket: 'Makefile' vs '(Makefile)'
-                    value_name = "(" + path.basename(document) + ")";
-                }
-            } else {
-                value_name = vscode.window.activeTextEditor.document.languageId;
-            }
-
-            let mapper = config.get("overloaded." + value_name, null);
-
-            if (mapper == null)
-                mapper = config.get(value_name, defaults.get(value_name));
+            let mapper = get_required_mapper_type();
 
             mapper = get_actual_mapper(mapper);
             if (mapper) {
@@ -102,10 +83,7 @@ function get_map_items(): MapInfo {
                 }
             }
 
-            if (
-                document.toLowerCase().endsWith(".ts") ||
-                document.toLowerCase().endsWith(".js")
-            ) {
+            if (document.toLowerCase().endsWith(".ts") || document.toLowerCase().endsWith(".js")) {
                 // dedicated built-in mapper
                 return { sourceFile: document, items: ts.mapper.generate(document) };
             }
@@ -235,8 +213,279 @@ function reveal_current_line_in_tree(treeView1: vscode.TreeView<MapItem>, treeVi
 
 function sort(direction: SortDirection) {
     MapItem.sortDirection = direction;
-    settingsTreeViewProvider.refresh();  // triggers both codemap trees refesh
+    settingsTreeViewProvider.refresh();  // triggers both codemap trees refresh
 }
+
+function getAllExtensionCombinations(fileName: string): string[] {
+    // this method extracts all possible extensions from a file name
+    // e.g. "test.g.cs" -> ["g.cs", "cs"]
+
+    let parts = fileName.split('.');
+    parts.shift(); // Remove the first part (the file name itself)
+
+    let extensions: string[] = [];
+
+    while (parts.length > 0) {
+        // Add the full extension 
+        // Escape dots as value names with dots are not allowed in settings.json)
+        // Interestingly enough VSCode is fine with some dot-containing names (e.g. "debug.javascript.suggestPrettyPrinting")
+
+        // push if it is not there yet
+        let item = parts.join('/');
+        if (!extensions.includes(item)) {
+            extensions.push(item);
+        }
+
+        // do not escape dots as VSCode may fix it and start supporting dots in the future
+        item = parts.join('.');
+        if (!extensions.includes(item)) {
+            extensions.push(item);
+        }
+
+        parts.shift();
+    }
+
+    return extensions;
+}
+
+function get_required_mapper_type(returnIdOnly: boolean = false): string {
+
+    let document = vscode.window.activeTextEditor.document.fileName;
+    let config = vscode.workspace.getConfiguration("codemap");
+
+    let possibleExtensions = []; // to allow testing for complex extensions like '.razor.cs' 
+
+    if (document) {
+        if (fs.existsSync(document)) {
+            // var extension = path.extname(document.toLowerCase());
+            var extensions = getAllExtensionCombinations(path.basename(document).toLowerCase());
+            if (extensions.length > 0) {
+                // Trim starting dot: '.py' vs 'py'
+                extensions.forEach(extension =>
+                    possibleExtensions.push(extension.toLowerCase()));
+            }
+            else {
+                // Add bracket: 'Makefile' vs '(Makefile)'
+                possibleExtensions.push("(" + path.basename(document) + ")");
+            }
+        } else {
+            possibleExtensions.push(vscode.window.activeTextEditor.document.languageId);
+        }
+    }
+
+    let extension = null;
+    let mapper = null;
+    for (let i = 0; i < possibleExtensions.length; i++) {
+
+        extension = possibleExtensions[i];
+        mapper = config.get("overloaded." + extension, null);
+
+        if (mapper == null)
+            mapper = config.get(extension, defaults.get(extension));
+
+        if (mapper)
+            break;
+    }
+
+    if (returnIdOnly) {
+        return extension; // regardless if the mapper exists or not
+    }
+    else {
+        return mapper;
+    }
+}
+
+function edit_mapper() {
+
+    try {
+
+        let value_name = get_required_mapper_type(true);
+        if (value_name) {
+
+            let config = vscode.workspace.getConfiguration("codemap");
+            let mapper = config.get("overloaded." + value_name, null);
+
+            let settingsFile = path.join(cs.user_dir(), "..", "settings.json");
+            let existingMapperIndex = -1;
+
+            if (mapper == null) {
+                mapper = config.get(value_name, defaults.get(value_name));
+
+                let lines = fs.readFileSync(settingsFile, 'utf8').split(/\r?\n/g);
+
+                let rgx = new RegExp('\"codemap\.' + value_name.toLowerCase() + '\":', "g");
+                for (let i = 0; i < lines.length; i++) {
+                    if (existingMapperIndex == -1 && lines[i].match(rgx)) {
+                        existingMapperIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            mapper = get_actual_mapper(mapper);
+
+            if (!mapper) {
+                // dedicated built-in mappers
+                if (value_name == "ts" || value_name == "js") {
+                    mapper = "mapper_ts.js";
+                } else if (value_name == "cs") {
+                    mapper = "mapper_cs.js";
+                }
+            }
+
+            if (mapper) {
+
+                if (typeof mapper == "string") { // custom dedicated mapper (path string)
+
+                    let file = mapper;
+                    if (!path.isAbsolute(file)) {
+                        file = path.join(__dirname, file);
+                        vscode.window.showInformationMessage(`The file ${path.basename(file)} is a part of CodeMap distribution. 
+                        It will be overwritten after the extension next update. Thus you may want to make an editable copy of`+
+                            ' this file and add it as a custom dedicated mapper in the settings file.');
+
+                    }
+                    commands.executeCommand('vscode.open', Uri.file(file));
+                }
+                else { // Generic mapper (an object)
+                    if (existingMapperIndex != null) { // the mapper is in the user settings file
+                        commands.executeCommand('vscode.open', Uri.file(settingsFile))
+                            .then(() => {
+                                let editor = vscode.window.activeTextEditor;
+                                let range = editor.document.lineAt(existingMapperIndex).range;
+                                editor.selection = new vscode.Selection(range.start, range.end);
+                                editor.revealRange(range);
+                            });
+                    } else {
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'codemap.' + value_name);
+                    }
+                }
+                return;
+            }
+        }
+        vscode.window.showErrorMessage(
+            'The current document does not have associated CodeMap mapper. ' +
+            'Use command "CodeMap: Create..." if you want to create a new mapper.');
+    } catch (error) {
+        console.log(error.toString());
+    }
+}
+
+function create_mapper() {
+
+    var mapper_type = get_required_mapper_type(true);
+    var dedicated = 'Dedicated mapper (JS file)';
+    var generic = 'Generic mapper (regular expression in the settings file)';
+
+    vscode.window
+        .showQuickPick([dedicated, generic])
+        .then(selectedItem => {
+
+            if (selectedItem == dedicated) {
+                var doc = path.join(cs.user_dir(), `mapper_${mapper_type}.js`);
+                if (fs.existsSync(doc)) {
+                    vscode.window.showErrorMessage(
+                        'The current document mapper already exists. Opening it instead of creating a new one.');
+                }
+                else {
+                    var code = `"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("fs");
+class mapper {
+    static read_all_lines(file) {
+        let text = fs.readFileSync(file, 'utf8');
+        return text.split(/\\r?\\n/g);
+    }
+    static generate(file) {
+        let members = [];
+        let line_num = 0;
+        try {
+            mapper
+                .read_all_lines(file)
+                .forEach(line => {
+                    line_num++;
+                    if(line_num < 3) // demo first 3 lines only 
+                        members.push(\`item|\${line_num}|level3\`);
+            });
+        }
+        catch (error) {
+        }
+        return members;
+    }
+}
+exports.mapper = mapper;`;
+
+                    fs.writeFileSync(doc, code, { encoding: 'utf8' });
+                }
+                commands.executeCommand('vscode.open', Uri.file(doc));
+            }
+            else if (selectedItem == generic) {
+
+                let settingsFile = path.join(cs.user_dir(), "..", "settings.json");
+                let lines = fs.readFileSync(settingsFile, 'utf8').split(/\r?\n/g);
+
+                let rgx = new RegExp('\"codemap\.' + mapper_type.toLowerCase() + '\":', "g");
+                let firstMapperIndex = -1;
+                let existingMapperIndex = -1;
+                for (let i = 0; i < lines.length; i++) {
+                    if (firstMapperIndex == -1 && lines[i].match(/(\s*)\"\w+\.\w+\"\:(\s*)\[/g))
+                        firstMapperIndex = i;
+                    if (existingMapperIndex == -1 && lines[i].match(rgx)) {
+                        existingMapperIndex = i;
+                        break;
+                    }
+                }
+
+                let selectedLine = 1;
+                if (existingMapperIndex == -1) {
+                    selectedLine = firstMapperIndex;
+                } else {
+                    selectedLine = existingMapperIndex;
+                }
+
+                commands.executeCommand('vscode.open', Uri.file(settingsFile))
+                    .then(() => {
+
+                        let editor = vscode.window.activeTextEditor;
+                        let range = editor.document.lineAt(selectedLine).range;
+
+                        if (existingMapperIndex == -1) {
+                            range = editor.document.lineAt(selectedLine - 1).range; // one line above
+                            editor.selection = new vscode.Selection(range.start, range.start);
+
+                            const editRange = editor.document.lineAt(editor.selection.end.line).range.end;
+
+                            editor.edit(editBuilder => {
+                                if (editor !== undefined) {
+                                    editBuilder.insert(editRange, `
+  "codemap.${mapper_type.toLowerCase()}": [
+     {
+       "pattern": "function (.*?)[(|:{]",
+       "clear": "({",
+       "suffix": "()",
+       "role": "function",
+       "icon": "function"
+      }
+  ],`);
+                                }
+
+                            });
+                            range = editor.document.lineAt(selectedLine).range;
+                            editor.selection = new vscode.Selection(range.start, range.end);
+                        }
+                        else {
+                            editor.selection = new vscode.Selection(range.start, range.end);
+                            vscode.window.showErrorMessage(
+                                'The current document mapper already exists. Opening it instead of creating a new one.');
+                        }
+
+                        editor.revealRange(range);
+                    });
+
+            }
+        });
+}
+
 
 function quick_pick() {
 
@@ -299,6 +548,9 @@ export function activate(context: vscode.ExtensionContext) {
     treeViewProvider2 = new FavoritesTreeProvider(get_map_items, settingsTreeViewProvider);
     let treeView1 = vscode.window.createTreeView("codemap-own-view", { treeDataProvider: treeViewProvider1, showCollapseAll: true });
     let treeView2 = vscode.window.createTreeView("codemap-explorer-view", { treeDataProvider: treeViewProvider2, showCollapseAll: true });
+
+    vscode.commands.registerCommand("codemap.edit_mapper", edit_mapper);
+    vscode.commands.registerCommand("codemap.create_mapper", create_mapper);
 
     vscode.commands.registerCommand("codemap.reveal", () => reveal_current_line_in_tree(treeView1, treeView2));
     vscode.commands.registerCommand("codemap.quick_pick", quick_pick);

@@ -1,5 +1,34 @@
 # Change Log
 
+## 1.25.0 (15 June 2024)
+
+- Issue #96: Unresponsive Generic Mapper
+- Added support (dedicated mapper) for LScript syntax.
+
+## 1.24.0 (21 April 2024)
+
+- Issue #59: How to register a custom mapper with a complex file extension
+  
+## 1.23.0 (8 April 2024)
+
+- Issue #94: Default class/function display settings
+
+## 1.22.0 (13 March 2024)
+
+- Added support for React modules in TypeScript and JavaScript syntax (*.tsx/*.jsx files).
+
+## 1.21.0 (5 February 2024)
+
+- Added support for GO syntax (*.go files).
+- Added workflow for editing the mapper of the active opened document.
+- Added workflow for creating a new mapper for the active opened document.
+- New commands: `codemap.edit_mapper` and `codemap.create_mapper`
+
+## 1.20.5 (30 January 2024)
+
+- Improved TS mapper algorithm so it handles pure JS class functions for `*.js` files.
+- Updated all packages
+
 ## 1.20.4 (18 December 2023)
 
 - Added support Arduino syntax (*.ino files)
