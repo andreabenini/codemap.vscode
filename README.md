@@ -38,6 +38,7 @@ _Features_:
   * VB.NET
   * PDL2 (Comau Robot Language)
   * LScript
+  * Vericode
 * [Customization by adding support for new syntaxes via:](https://github.com/oleg-shilo/codemap.vscode/wiki/Adding-custom-mappers)
   * A generic mapper that is a set of Regex expressions in user settings
   * A dedicated simple mapper JS script file.
@@ -47,9 +48,9 @@ _Features_:
 
 ![codemap_vscode.gif](https://raw.githubusercontent.com/oleg-shilo/codemap.vscode/master/resources/images/codemap_vscode.gif)
 
-Note, the latest releases of CodeMap place the plugin view in its own activitrybar:
+Note, the latest releases of CodeMap place the plugin view in its own activity bar:
 
-![image](https://user-images.githubusercontent.com/16729806/67156959-16bf4a80-f371-11e9-841b-dee1b9ba364e.png)
+![image](https://github.com/user-attachments/assets/f29082b7-5ad1-4431-85d9-29c22f466b78)
 
 ## Adding custom mappers
 The most intriguing feature is the possibility to extend the plugin to support new and even more exotic syntaxes. Read more about the technique in this [Wiki page](https://github.com/oleg-shilo/codemap.vscode/wiki/Adding-custom-mappers). 
