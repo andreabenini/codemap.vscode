@@ -8,15 +8,19 @@ import { FavoritesTreeProvider, MapItem, MapInfo, SortDirection, SettingsTreePro
 import { Uri, commands, TextDocument, TextEditor } from "vscode";
 import * as ts from "./mapper_ts";
 import * as cs from "./mapper_cs";
+import * as cs_parser from "./mapper_cs_parser";
 import * as generic from "./mapper_generic";
 import * as md from "./mapper_md";
 import { SyntaxMapping } from "./mapper_generic";
 import { Utils, config_defaults } from "./utils";
+import { fileURLToPath } from "url";
+import { Console } from "console";
 
 const defaults = new config_defaults();
 let treeViewProvider1: FavoritesTreeProvider;
 let treeViewProvider2: FavoritesTreeProvider;
 let settingsTreeViewProvider: SettingsTreeProvider;
+let lastGeneratedMap = { file: "", items: [], date: new Date() };
 let moduleModDates = {};
 
 function get_actual_mapper(mapper: any): any {
@@ -49,8 +53,7 @@ function settings_on_click(item: SettingsItem) {
     item.onClick();
     settingsTreeViewProvider.refresh(item);
 }
-
-
+let index = 0;
 function get_map_items(): MapInfo {
     let result = { sourceFile: null, items: [] };
 
@@ -59,41 +62,51 @@ function get_map_items(): MapInfo {
 
         let document = vscode.window.activeTextEditor.document.fileName;
 
+
         if (document) {
+
+            var docStats = fs.statSync(document);
+
+            // get_map_items is called by multiple tree and settings providers. Don't regenerate the map if it was generated recently
+            // and the document has not been changed since then.
+            if (lastGeneratedMap.file == document && lastGeneratedMap.date.getTime() == docStats.mtime.getTime()) {
+                return { sourceFile: lastGeneratedMap.file, items: lastGeneratedMap.items };
+            }
+
+            result.sourceFile = document;
 
             let mapper = get_required_mapper_type();
 
             mapper = get_actual_mapper(mapper);
+
             if (mapper) {
                 if (typeof mapper == "string") {
                     // custom dedicated mapper
                     // process.env.VSCODE_USER
                     var dynamic_mapper = requireWithHotReload(mapper as string).mapper;
-                    return {
-                        sourceFile: document,
-                        items: dynamic_mapper.generate(document)
-                    };
+                    result.items = dynamic_mapper.generate(document)
                 } else {
                     // generic built-in mapper
                     let mapping_info = mapper as SyntaxMapping[];
-                    return {
-                        sourceFile: document,
-                        items: generic.mapper.generate(document, mapping_info)
-                    };
+                    result.items = generic.mapper.generate(document, mapping_info)
                 }
             }
 
-            if (document.toLowerCase().endsWith(".ts") || document.toLowerCase().endsWith(".js")) {
+            else if (document.toLowerCase().endsWith(".ts") || document.toLowerCase().endsWith(".js")) {
                 // dedicated built-in mapper
-                return { sourceFile: document, items: ts.mapper.generate(document) };
+                result.items = ts.mapper.generate(document);
             }
 
-            if (document.toLowerCase().endsWith(".cs")) {
+            else if (document.toLowerCase().endsWith(".cs")) {
                 // dedicated built-in mapper
-                return { sourceFile: document, items: cs.mapper.generate(document) };
+                let useNoDependencyCSharpMapper = vscode.workspace.getConfiguration("codemap").get('useNoDependencyCSharpMapper', false);
+                if (useNoDependencyCSharpMapper)
+                    result.items = cs_parser.mapper.generate(document);
+                else
+                    result.items = cs.mapper.generate(document);
             }
 
-            if (document.toLowerCase().endsWith(".razor")) {
+            else if (document.toLowerCase().endsWith(".razor")) {
 
                 let codeFile = document + ".codemap.cs";
                 let code = [];
@@ -122,12 +135,25 @@ function get_map_items(): MapInfo {
                 fs.unlinkSync(codeFile);
 
                 // dedicated built-in mapper
-                return { sourceFile: document, items: map };
+                result.items = map;
             }
+
+            // cache the last result 
+            lastGeneratedMap.file = result.sourceFile;
+            lastGeneratedMap.items = result.items;
+            lastGeneratedMap.date = docStats.mtime;
         }
     } catch (error) {
         console.log(error.toString());
+        result.sourceFile = null;
+        result.items = [];
+
+        // cache the last result 
+        lastGeneratedMap.file = result.sourceFile;
+        lastGeneratedMap.items = result.items;
+        lastGeneratedMap.date = null;
     }
+
     return result;
 }
 
@@ -540,6 +566,8 @@ let mapInfo: MapInfo;
 export function activate(context: vscode.ExtensionContext) {
     Utils.init();
 
+    // console.log(data1);
+
     settingsTreeViewProvider = new SettingsTreeProvider(get_map_items);
     let settingsTree1 = vscode.window.createTreeView("codemap-settings-own-view", { treeDataProvider: settingsTreeViewProvider, showCollapseAll: true });
     let settingsTree2 = vscode.window.createTreeView("codemap-settings-explorer-view", { treeDataProvider: settingsTreeViewProvider, showCollapseAll: true });
@@ -562,6 +590,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("codemap.sort_desc", () => sort(SortDirection.Desc));
 
     vscode.commands.registerCommand("codemap.allow_all", () => allow_all());
+    vscode.commands.registerCommand("codemap.toggle_csharp_mapper", () => cs.toggle_csharp_mapper(true));
 
     vscode.commands.registerCommand("codemap.mappers", () => {
         let mappers = vscode.workspace.getConfiguration("codemap");
