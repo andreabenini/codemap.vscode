@@ -1,9 +1,15 @@
 # Change Log
 
-## 1.26.5 (??? 2024)
+## 1.26.6 (8 November 2024)
+
+- Added expanding envars in the custom dedicated mapper from settings
+- Fixed problem with syntaxer deployment warning when syntaxer exits successfully but too quickly
+
+## 1.26.5 (5 November 2024)
 
 - Added detection of the faulty C# syntaxer and prompt with the suggested workaround.
 - Added command `codemap.toggle_csharp_mapper`
+- Added persistance of the nodes collapsible state (per session)
 
 ## 1.26.4 (2 November 2024)
 

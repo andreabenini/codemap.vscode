@@ -170,7 +170,16 @@ export class SettingsTreeProvider implements vscode.TreeDataProvider<SettingsIte
     }
 }
 
-export class FavoritesTreeProvider implements vscode.TreeDataProvider<MapItem> {
+const treeStateMap = new Map();
+
+export function noteNodeState(context: MapItem, collapsed: boolean): void {
+    let nodeStates = treeStateMap.get(context.context.split('|')[0]);
+    let nodeKey = `${context.title}|${context.nesting_level}`;
+    nodeStates.set(nodeKey, collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded);
+}
+
+
+export class DocumentTreeProvider implements vscode.TreeDataProvider<MapItem> {
 
     private _onDidChangeTreeData: vscode.EventEmitter<MapItem | undefined> = new vscode.EventEmitter<MapItem | undefined>();
     readonly onDidChangeTreeData: vscode.Event<MapItem | undefined> = this._onDidChangeTreeData.event;
@@ -261,13 +270,17 @@ export class FavoritesTreeProvider implements vscode.TreeDataProvider<MapItem> {
             return nodes;
 
         let validItemTypes = this.MapSettingsTreeProvider.nodeTypesAllowedByUser(info.sourceFile);
-        this.Items = FavoritesTreeProvider.parseScriptItems(info.items, info.sourceFile, validItemTypes);
+        this.Items = DocumentTreeProvider.parseScriptItems(info.items, info.sourceFile, validItemTypes);
         return this.Items;
     }
 
     public static parseScriptItems(items: string[], sourceFile: string, nodeTypesToKeep: string[]): MapItem[] {
 
         let nodes = [];
+        let keysToKeep = [];
+
+        if (!treeStateMap.has(sourceFile))
+            treeStateMap.set(sourceFile, new Map());
 
         // https://github.com/Microsoft/vscode/issues/34130: TreeDataProvider: allow selecting a TreeItem without affecting its collapsibleState
         // https://github.com/patrys/vscode-code-outline/issues/24: Is it possible to disable expand/collapse on click
@@ -361,6 +374,7 @@ export class FavoritesTreeProvider implements vscode.TreeDataProvider<MapItem> {
                                     parent = map[key];
                                 }
                             }
+
                             parent.addChildItem(node);
                             node.parent = parent;
                         }
@@ -383,6 +397,21 @@ export class FavoritesTreeProvider implements vscode.TreeDataProvider<MapItem> {
                     };
                 }
 
+                let nodeStates = treeStateMap.get(sourceFile);
+                let nodeKey = `${node.title}|${node.nesting_level}`;
+                keysToKeep.push(nodeKey);
+
+                if (nodeStates.has(nodeKey)) {
+
+                    node.collapsibleState = nodeStates.get(nodeKey);
+                    // to avoid children to be hidden because of plainTextMode change
+                    if (!plainTextMode && node.context === 'file' && node.collapsibleState == vscode.TreeItemCollapsibleState.None) {
+                        node.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+                    }
+                }
+                else {
+                    nodeStates.set(nodeKey, node.collapsibleState);
+                }
                 map[node.nesting_level] = node;
             }
         });
@@ -390,6 +419,14 @@ export class FavoritesTreeProvider implements vscode.TreeDataProvider<MapItem> {
         let sortingEnabled = Config.get('sortingEnabled');
         if (sortingEnabled && !plainTextMode) {
             nodes.sort(MapItem.compareByTitle);
+        }
+
+        let nodeStates = treeStateMap.get(sourceFile);
+
+        for (let key of nodeStates.keys()) {
+            if (!keysToKeep.includes(key)) {
+                nodeStates.delete(key);
+            }
         }
 
         return nodes;
