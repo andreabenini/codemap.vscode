@@ -1,5 +1,21 @@
 # Change Log
 
+## 1.28.0 (5 Dec, 2025)
+
+- Added support for YAML syntax (*.yaml and *.yml files). Courtesy of Benoit Brummer.
+
+## 1.27.0 (1 Dec, 2025)
+
+- Added support for Rust syntax (*.rs files)
+
+## 1.26.8 (14 Oct, 2025)
+
+- Updated extension logo icon
+
+## 1.26.7 (12 October 2025)
+
+-#108: Add "name" parameter to generic mappers so it shows in the "Codemap Settings" Tree View
+
 ## 1.26.6 (8 November 2024)
 
 - Added expanding envars in the custom dedicated mapper from settings
