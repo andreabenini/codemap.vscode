@@ -1,9 +1,22 @@
 # Change Log
 
+## 1.29.3 (14 Mar, 2026)
+
+- #116: Sync to cursor position when view becomes visible
+- Optimized auto-reveal on text cursor position change. Do it only if the line is changed since the last reveal action.
+  
+## 1.29.2 (26 Feb, 2026)
+
+- #114: Fixed config problem with VB.NET mapper("Updated file reference for VB mapper")
+
+- ## 1.29.1 (22 Feb, 2026)
+
+- #114: Added dedicated mapper for VB.NET (courtesy of @angelotodaro)
+
 ## 1.29.0 (23 Dec, 2025)
 
 - #112: Added command/button for expanding all tree nodes.
- 
+
 ## 1.28.0 (5 Dec, 2025)
 
 - Added support for YAML syntax (*.yaml and *.yml files). Courtesy of Benoit Brummer.
